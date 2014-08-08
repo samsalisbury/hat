@@ -85,6 +85,15 @@ func (n *ResolvedNode) ParentEntity() interface{} {
 	}
 }
 
+func (n *ResolvedNode) Path() string {
+	p := ""
+	for n != nil {
+		p = n.ID + "/" + p
+		n = n.Parent
+	}
+	return p
+}
+
 func newNode(parent *Node, field *reflect.StructField, entityType reflect.Type) (*Node, error) {
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()

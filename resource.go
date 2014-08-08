@@ -7,13 +7,13 @@ import (
 type Resource struct {
 	Entity   interface{}
 	Embedded map[string]interface{}
-	Links    map[string]interface{}
+	Links    []Link
 }
 
 func (n *ResolvedNode) Resource(entity interface{}) (*Resource, error) {
 	if embedded, err := n.ManifestEmbedded(n.Node.Members); err != nil {
 		return nil, err
-	} else if links, err := n.ManifestLinks(); err != nil {
+	} else if links, err := n.Links(); err != nil {
 		return nil, err
 	} else {
 		return &Resource{entity, embedded, links}, nil
@@ -21,10 +21,6 @@ func (n *ResolvedNode) Resource(entity interface{}) (*Resource, error) {
 }
 
 func (n *ResolvedNode) ManifestEmbedded(members map[string]*Member) (map[string]interface{}, error) {
-	return nil, nil
-}
-
-func (n *ResolvedNode) ManifestLinks() (map[string]interface{}, error) {
 	return nil, nil
 }
 
