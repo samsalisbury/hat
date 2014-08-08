@@ -1,5 +1,18 @@
 package hat
 
+import (
+	"net/http"
+	"testing"
+)
+
+func TestHat(t *testing.T) {
+	if s, err := NewServer(Root{}); err != nil {
+		t.Error(err)
+	} else {
+		http.ListenAndServe(":8080", s)
+	}
+}
+
 type Root struct {
 	Hello string
 	Apps  Apps `hat:"embed()"`
@@ -28,27 +41,29 @@ func (entity *Root) Manifest(_ interface{}, _ string) error {
 }
 
 func (entity *Apps) Manifest(parent *Root, _ string) error {
-	(*entity) = Apps{
-		"test-app": App{
-			"Test App",
-			Versions{
-				"0.0.1": Version{"test-app-v0-0-1", "0.0.1", "May 2013"},
-				"0.0.2": Version{"test-app-v0-0-2", "0.0.2", "August 2014"},
-			},
-		},
-		"other-app": App{
-			"Other App",
-			Versions{
-				"0.1.0": Version{"other-app-v0-0-1", "0.1.0", "June 2014"},
-				"0.4.0": Version{"other-app-v0-0-2", "0.4.0", "July 2014"},
-			},
-		},
-	}
+	(*entity) = the_apps
 	return nil
 }
 
+var the_apps = Apps{
+	"test-app": App{
+		"Test App",
+		Versions{
+			"0.0.1": Version{"test-app-v0-0-1", "0.0.1", "May 2013"},
+			"0.0.2": Version{"test-app-v0-0-2", "0.0.2", "August 2014"},
+		},
+	},
+	"other-app": App{
+		"Other App",
+		Versions{
+			"0.1.0": Version{"other-app-v0-0-1", "0.1.0", "June 2014"},
+			"0.4.0": Version{"other-app-v0-0-2", "0.4.0", "July 2014"},
+		},
+	},
+}
+
 func (entity *App) Manifest(parent *Apps, id string) error {
-	if app, ok := parent[id]; ok {
+	if app, ok := (*parent)[id]; ok {
 		(*entity) = app
 	}
 	return nil
@@ -60,7 +75,7 @@ func (entity *Versions) Manifest(parent *App, _ string) error {
 }
 
 func (entity *Version) Manifest(parent *Versions, id string) error {
-	if version, ok := parent[id]; ok {
+	if version, ok := (*parent)[id]; ok {
 		(*entity) = version
 	}
 	return nil
