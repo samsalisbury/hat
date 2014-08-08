@@ -53,3 +53,7 @@ func (n *Node) MethodError(name string, args ...interface{}) hatError {
 	args = append([]interface{}{n.EntityType.Name() + "." + name}, args...)
 	return Error(args...)
 }
+
+func debug(args ...interface{}) {
+	println(Error(args...).Error())
+}

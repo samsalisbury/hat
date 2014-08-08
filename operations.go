@@ -64,13 +64,9 @@ func (o *Operation) Compile(n *Node, m reflect.Method) (*CompiledOperation, erro
 		return nil, n.MethodError(m.Name, "Wrong number of inputs. Expected", len(o.Inputs), "but got", actualNumIn)
 	}
 	for i, in := range o.Inputs {
-		pos := i + 1
-		realType := m.Type.In(pos)
-		if realType.Kind() == reflect.Ptr {
-			realType = realType.Elem()
-		}
-		if !in.Accepts(realType) {
-			return nil, n.Error(m.Name, "cannot accept input type", realType, "at position", i)
+		realType := m.Type.In(i + 1)
+		if err := in.Accepts(n, m.Name, i, realType); err != nil {
+			return nil, err
 		}
 		switch in {
 		case IN_OtherPayload:
@@ -210,11 +206,31 @@ const (
 	IN_ID           = IN(iota)
 )
 
-func (in IN) Accepts(t reflect.Type) bool {
-	if in == IN_ID {
-		return t.Kind() == reflect.String
-	} else {
-		return true
+func (in IN) Accepts(n *Node, name string, pos int, t reflect.Type) error {
+	switch in {
+	default:
+		panic("The programmer has made a serious error.")
+	case IN_ID:
+		if t.Kind() == reflect.String {
+			return nil
+		} else {
+			return n.MethodError(name, "cannot accept input type", t, "at position", pos)
+		}
+	case IN_Parent:
+		if n.Parent == nil || t == n.Parent.EntityPtrType {
+			return nil // maybe one day we won't need these useless params
+		} else {
+			return n.MethodError(name, "expects a pointer to its parent type", n.Parent.EntityPtrType, "at position", pos)
+		}
+	case IN_OtherPayload:
+		if t.Kind() == reflect.Ptr {
+			elemKind := t.Elem().Kind()
+			switch elemKind {
+			case reflect.Struct, reflect.Map, reflect.Slice:
+				return nil // This is the only ok case, otherwise we return the below error.
+			}
+		}
+		return n.MethodError(name, "expects a pointer to a struct, map, or slice at position", pos)
 	}
 }
 

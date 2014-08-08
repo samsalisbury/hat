@@ -3,11 +3,16 @@ package hat
 func (n *ResolvedNode) EmbeddedResources() (map[string]interface{}, error) {
 	embedded := map[string]interface{}{}
 	for name, member := range n.Node.Members {
-		expansion := member.DefaultExpansion
-		if expansion == "full()" {
-			memberNode, _ := n.Locate(name)
-			resolvedMemberNode, _ := memberNode.Node.Resolve(n, n.ID)
-			resource, _ := resolvedMemberNode.DefaultResource()
+		if !member.Tag.Embed {
+			continue
+		}
+		if memberNode, err := n.Locate(name); err != nil {
+			return nil, err
+		} else if resolvedMemberNode, err := memberNode.Node.Resolve(n, n.ID); err != nil {
+			return nil, err
+		} else if resource, err := resolvedMemberNode.DefaultResource(); err != nil {
+			return nil, err
+		} else {
 			embedded[name] = resource
 		}
 	}

@@ -15,8 +15,13 @@ func TestHat(t *testing.T) {
 }
 
 type Root struct {
+	Hello  string
+	Apps   Apps   `hat:"embed()"`
+	Health Health `hat:"link()"`
+}
+
+type Health struct {
 	Hello string
-	Apps  Apps `hat:"embed()"`
 }
 
 type Apps map[string]App
@@ -41,7 +46,14 @@ func (entity *Root) Manifest(_ interface{}, _ string) error {
 	return nil
 }
 
-func (entity *Apps) Manifest(parent *Root, _ string) error {
+func (entity *Health) Manifest(_ *Root, _ string) error {
+	(*entity) = Health{
+		Hello: "Feelin' good!",
+	}
+	return nil
+}
+
+func (entity *Apps) Manifest(_ *Root, _ string) error {
 	(*entity) = the_apps
 	return nil
 }

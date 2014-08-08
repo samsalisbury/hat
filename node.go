@@ -6,7 +6,6 @@ import (
 
 type Node struct {
 	Parent         *Node
-	Field          *reflect.StructField
 	EntityType     reflect.Type
 	EntityPtrType  reflect.Type
 	Operations     compiled_ops
@@ -59,11 +58,9 @@ func (n *Node) Resolve(parentNode *ResolvedNode, id string) (*ResolvedNode, erro
 	if parentNode != nil && parentNode.Entity != nil {
 		parent = parentNode.Entity
 	}
-	println("ABOUT TO GALL GET WITH PARENT === " + Error(parent).Error())
 	if _, entity, err := n.HTTPMethods["GET"](n, parent, id, &Payload{}); err != nil {
 		return nil, err
 	} else {
-		println("SETTING RESOLVED NODE ENTITY TO ", Error(entity).Error())
 		return &ResolvedNode{n, parentNode, id, entity}, nil
 	}
 }
@@ -89,7 +86,7 @@ func newNode(parent *Node, field *reflect.StructField, entityType reflect.Type) 
 		entityType = entityType.Elem()
 	}
 	entityPtrType := reflect.PtrTo(entityType)
-	node := &Node{Parent: parent, Field: field, EntityType: entityType, EntityPtrType: entityPtrType}
+	node := &Node{Parent: parent, EntityType: entityType, EntityPtrType: entityPtrType}
 	if err := node.init(); err != nil {
 		return nil, err
 	} else {
