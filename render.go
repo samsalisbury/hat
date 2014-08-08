@@ -5,7 +5,7 @@ import (
 )
 
 func (root *Node) Render(path string, method string, p *Payload) (int, interface{}, error) {
-	if target, err := root.Locate(strings.Split(path[1:], "/")); err != nil {
+	if target, err := root.Locate(strings.Split(path[1:], "/")...); err != nil {
 		return 0, nil, err
 	} else if method, ok := target.Node.HTTPMethods[method]; !ok {
 		return 0, nil, HttpError(405, target, "does not support method", method, "; it does support:", supportedMethods(target.Node))

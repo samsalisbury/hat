@@ -23,24 +23,15 @@ type ResolvedNode struct {
 	Entity interface{}
 }
 
-type Member struct {
-	Node             *Node
-	DefaultExpansion string
-}
-
-func newMember(n *Node, defaultExpansion string) *Member {
-	return &Member{n, defaultExpansion}
-}
-
-func (root *Node) Locate(path []string) (*ResolvedNode, error) {
+func (root *Node) Locate(path ...string) (*ResolvedNode, error) {
 	if resolvedRoot, err := root.Resolve(nil, ""); err != nil {
 		return nil, err
 	} else {
-		return resolvedRoot.Locate(path)
+		return resolvedRoot.Locate(path...)
 	}
 }
 
-func (n *ResolvedNode) Locate(path []string) (*ResolvedNode, error) {
+func (n *ResolvedNode) Locate(path ...string) (*ResolvedNode, error) {
 	if len(path) == 0 || (len(path) == 1 && len(path[0]) == 0) {
 		return n, nil
 	}
@@ -50,13 +41,13 @@ func (n *ResolvedNode) Locate(path []string) (*ResolvedNode, error) {
 		if rn, err := n.Node.Collection.Node.Resolve(n, id); err != nil {
 			return nil, err
 		} else {
-			return rn.Locate(path)
+			return rn.Locate(path...)
 		}
 	} else if member, ok := n.Node.Members[id]; ok {
 		if rn, err := member.Node.Resolve(n, id); err != nil {
 			return nil, err
 		} else {
-			return rn.Locate(path)
+			return rn.Locate(path...)
 		}
 	} else {
 		return nil, HttpError(404, id, "not found.")
@@ -86,12 +77,11 @@ func (n *ResolvedNode) ParentEntity() interface{} {
 }
 
 func (n *ResolvedNode) Path() string {
-	p := ""
-	for n != nil {
-		p = n.ID + "/" + p
-		n = n.Parent
+	if n.Parent != nil {
+		return n.Parent.Path() + "/" + n.ID
+	} else {
+		return n.ID
 	}
-	return p
 }
 
 func newNode(parent *Node, field *reflect.StructField, entityType reflect.Type) (*Node, error) {

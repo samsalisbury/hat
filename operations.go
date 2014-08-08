@@ -105,12 +105,7 @@ func (co *CompiledOperation) Invoke(n *Node, parent interface{}, id string, p *P
 }
 
 func (bo *BoundOperation) Invoke(n *Node, parent interface{}, id string) (entity interface{}, other interface{}, err error) {
-	println(Error("Invoke bo.Method =", bo.Method).Error())
-	println(Error("Invoke bo.Method (NumIn) =", bo.Method.Type().NumIn()).Error())
 	in := bo.PrepareInputs(n, parent, id)
-	for i, j := range in {
-		println(Error("In :", i, "=", j).Error())
-	}
 	out := bo.Method.Call(in)
 	entity = bo.Receiver
 	for i, o := range bo.Compiled.Def.Outputs {
@@ -128,10 +123,8 @@ func (bo *BoundOperation) Invoke(n *Node, parent interface{}, id string) (entity
 }
 
 func (bo *BoundOperation) PrepareInputs(n *Node, parent interface{}, id string) []reflect.Value {
-	println(Error("PrepareInputs parent:", parent, "; id:", id).Error())
 	prepared := []reflect.Value{}
 	if bo.Compiled.Def.Requires(IN_Parent) {
-		println("ADD PARENT")
 		// TODO: Evaluate if this check is necessary
 		if parent == nil {
 			if n.Parent != nil {
@@ -143,14 +136,11 @@ func (bo *BoundOperation) PrepareInputs(n *Node, parent interface{}, id string) 
 		prepared = append(prepared, reflect.ValueOf(parent))
 	}
 	if bo.Compiled.Def.Requires(IN_ID) {
-		println("ADD ID")
 		prepared = append(prepared, reflect.ValueOf(id))
 	}
 	if bo.Compiled.Def.Requires(IN_OtherPayload) {
-		println("ADD OTHER PAYLOAD")
 		prepared = append(prepared, reflect.ValueOf(bo.OtherPayload))
 	}
-	println(Error("PREPRED", len(prepared), "ARGS").Error())
 	return prepared
 }
 
@@ -179,10 +169,6 @@ func (bo *BoundOperation) BindOtherPayload(n *Node, p *Payload) error {
 }
 
 func (bo *BoundOperation) BindMethod() error {
-	println(Error("BindMethod bo.Receiver =", bo.Receiver).Error())
-	println(Error("bo.Compiled.Method.Name =", bo.Compiled.Method.Name).Error())
-	println(Error("reflect.ValueOf(bo.Receiver) =", reflect.ValueOf(bo.Receiver)).Error())
-	println(Error("bo.Receiver =", bo.Receiver).Error())
 	method := reflect.ValueOf(bo.Receiver).MethodByName(bo.Compiled.Method.Name)
 	bo.Method = method
 	return nil
@@ -226,10 +212,8 @@ const (
 
 func (in IN) Accepts(t reflect.Type) bool {
 	if in == IN_ID {
-		println("Checking IN_ID", Error(t).Error())
 		return t.Kind() == reflect.String
 	} else {
-		println("Checking Other IN", Error(t).Error())
 		return true
 	}
 }

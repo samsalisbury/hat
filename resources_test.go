@@ -9,7 +9,8 @@ func TestHat(t *testing.T) {
 	if s, err := NewServer(Root{}); err != nil {
 		t.Error(err)
 	} else {
-		http.ListenAndServe(":8080", s)
+		println("Listening on :8080")
+		t.Fatal(http.ListenAndServe(":8080", s))
 	}
 }
 

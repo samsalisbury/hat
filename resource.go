@@ -10,18 +10,18 @@ type Resource struct {
 	Links    []Link
 }
 
+func (n *ResolvedNode) DefaultResource() (*Resource, error) {
+	return n.Resource(n.Entity)
+}
+
 func (n *ResolvedNode) Resource(entity interface{}) (*Resource, error) {
-	if embedded, err := n.ManifestEmbedded(n.Node.Members); err != nil {
+	if embedded, err := n.EmbeddedResources(); err != nil {
 		return nil, err
 	} else if links, err := n.Links(); err != nil {
 		return nil, err
 	} else {
 		return &Resource{entity, embedded, links}, nil
 	}
-}
-
-func (n *ResolvedNode) ManifestEmbedded(members map[string]*Member) (map[string]interface{}, error) {
-	return nil, nil
 }
 
 func mapify(v interface{}) (map[string]interface{}, error) {
