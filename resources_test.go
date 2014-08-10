@@ -17,11 +17,12 @@ func TestHat(t *testing.T) {
 type Root struct {
 	Hello  string
 	Apps   Apps   `hat:"embed()"`
-	Health Health `hat:"link()"`
+	Health Health `hat:"embed(TestField)"`
 }
 
 type Health struct {
-	Hello string
+	Hello     string
+	TestField string
 }
 
 type Apps map[string]App

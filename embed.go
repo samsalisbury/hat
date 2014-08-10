@@ -10,10 +10,12 @@ func (n *ResolvedNode) EmbeddedResources() (map[string]interface{}, error) {
 			return nil, err
 		} else if resolvedMemberNode, err := memberNode.Node.Resolve(n, n.ID); err != nil {
 			return nil, err
-		} else if resource, err := resolvedMemberNode.DefaultResource(); err != nil {
-			return nil, err
 		} else {
-			embedded[name] = resource
+			if resource, err := resolvedMemberNode.MemberResource(member.Tag.EmbedFields); err != nil {
+				return nil, err
+			} else {
+				embedded[name] = resource
+			}
 		}
 	}
 	return embedded, nil

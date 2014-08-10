@@ -6,7 +6,7 @@ import (
 
 var op_specs = map[string]*Op{
 	"Manifest": on(SELF_Nil).In().OptIn(IN_Parent, IN_ID).Out(OUT_Error).
-		RequireIf(func(_ reflect.Type, _ reflect.Type) bool { return true }),
+		RequireIf(func(_ *Node) bool { return true }),
 }
 
 type Op struct {
@@ -14,7 +14,7 @@ type Op struct {
 	Inputs         []IN
 	OptionalInputs []IN
 	Outputs        []OUT
-	Required       func(entity reflect.Type, parent reflect.Type) bool
+	Required       func(*Node) bool
 }
 
 func (o *Op) MinIn() int {
@@ -227,11 +227,11 @@ const (
 	OUT_OtherEntity = OUT(iota)
 )
 
-func on(self SELF) *Op                                                  { return &Op{On: self} }
-func (o *Op) In(inputs ...IN) *Op                                       { o.Inputs = inputs; return o }
-func (o *Op) OptIn(inputs ...IN) *Op                                    { o.OptionalInputs = inputs; return o }
-func (o *Op) Out(outputs ...OUT) *Op                                    { o.Outputs = outputs; return o }
-func (o *Op) RequireIf(p func(e reflect.Type, p reflect.Type) bool) *Op { o.Required = p; return o }
+func on(self SELF) *Op                         { return &Op{On: self} }
+func (o *Op) In(inputs ...IN) *Op              { o.Inputs = inputs; return o }
+func (o *Op) OptIn(inputs ...IN) *Op           { o.OptionalInputs = inputs; return o }
+func (o *Op) Out(outputs ...OUT) *Op           { o.Outputs = outputs; return o }
+func (o *Op) RequireIf(p func(*Node) bool) *Op { o.Required = p; return o }
 
 func iType(nilPtr interface{}) reflect.Type {
 	return reflect.TypeOf(nilPtr).Elem()

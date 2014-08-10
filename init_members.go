@@ -25,7 +25,7 @@ func (n *Node) initMapCollection() error {
 	if childNode, err := newNode(n, elementType); err != nil {
 		return err
 	} else {
-		n.Collection = &Member{Node: childNode, Tag: &MemberTag{}}
+		n.Collection = &Member{Node: childNode, Tag: &Tag{}}
 		n.CollectionName = elementType.Name()
 	}
 	return nil
@@ -37,7 +37,11 @@ func (n *Node) initStructMembers() error {
 	numFields := t.NumField()
 	for i := 0; i < numFields; i++ {
 		f := t.Field(i)
-		if tag := f.Tag.Get("hat"); tag != "" {
+		if tagData := f.Tag.Get("hat"); tagData != "" {
+			tag, err := parseTag(tagData)
+			if err != nil {
+				return err
+			}
 			name := strings.ToLower(f.Name)
 			if childNode, err := newNode(n, f.Type); err != nil {
 				return err
