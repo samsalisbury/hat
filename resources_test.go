@@ -59,14 +59,14 @@ type Version struct {
 	Date    string
 }
 
-func (entity *Root) Manifest(_ interface{}, _ string) error {
+func (entity *Root) Manifest() error {
 	(*entity) = Root{
 		Hello: "Wecome to the test API.",
 	}
 	return nil
 }
 
-func (entity *Health) Manifest(_ *Root, _ string) error {
+func (entity *Health) Manifest(_ *Root) error {
 	(*entity) = Health{
 		Hello: "Feelin' good!",
 	}
@@ -90,7 +90,7 @@ var the_apps = Apps{
 	},
 }
 
-func (entity *Versions) Manifest(parent *App, _ string) error {
+func (entity *Versions) Manifest(parent *App) error {
 	(*entity) = parent.Versions
 	return nil
 }

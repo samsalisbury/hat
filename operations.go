@@ -5,7 +5,7 @@ import (
 )
 
 var op_specs = map[string]*Op{
-	"Manifest": on(SELF_Nil).In(IN_Parent).OptIn(IN_ID).Out(OUT_Error).
+	"Manifest": on(SELF_Nil).In().OptIn(IN_Parent, IN_ID).Out(OUT_Error).
 		RequireIf(func(_ reflect.Type, _ reflect.Type) bool { return true }),
 }
 
@@ -22,7 +22,7 @@ func (o *Op) MinIn() int {
 }
 
 func (o *Op) MaxIn() int {
-	return o.MinIn() + o.MinIn()
+	return o.MinIn() + len(o.OptionalInputs)
 }
 
 func (o *Op) RequiresNilReceiver() bool {
