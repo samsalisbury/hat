@@ -161,29 +161,6 @@ func (bo *BoundOp) PrepareInputs() ([]reflect.Value, error) {
 		}
 	}
 	return prepared, nil
-
-	// i := 0
-	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_Parent) {
-	// 	i++
-	// 	// TODO: Evaluate if this check is necessary
-	// 	if parent == nil {
-	// 		if n.Parent != nil {
-	// 			parent = reflect.New(bo.Compiled.Node.Parent.EntityType).Interface()
-	// 		} else {
-	// 			parent = struct{}{}
-	// 		}
-	// 	}
-	// 	prepared = append(prepared, reflect.ValueOf(parent))
-	// }
-	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_ID) {
-	// 	i++
-	// 	prepared = append(prepared, reflect.ValueOf(id))
-	// }
-	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_Payload) {
-	// 	i++
-	// 	prepared = append(prepared, reflect.ValueOf(bo.OtherPayload))
-	// }
-	// return prepared
 }
 
 func (co *CompiledOp) Bind(inputs map[IN]boundInput) (*BoundOp, error) {
