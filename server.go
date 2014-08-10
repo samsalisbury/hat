@@ -11,7 +11,7 @@ type Server struct {
 }
 
 func NewServer(root interface{}) (*Server, error) {
-	if rootNode, err := newNode(nil, nil, reflect.TypeOf(root)); err != nil {
+	if rootNode, err := newNode(nil, reflect.TypeOf(root)); err != nil {
 		return nil, err
 	} else {
 		return &Server{rootNode}, nil

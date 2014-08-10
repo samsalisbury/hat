@@ -94,7 +94,7 @@ func (n *ResolvedNode) Path() string {
 	}
 }
 
-func newNode(parent *Node, field *reflect.StructField, entityType reflect.Type) (*Node, error) {
+func newNode(parent *Node, entityType reflect.Type) (*Node, error) {
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
 	}

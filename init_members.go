@@ -22,7 +22,7 @@ func (n *Node) initMapCollection() error {
 	if keyType.Kind() != reflect.String {
 		return Error("Only collections with string keys are currently supported.")
 	}
-	if childNode, err := newNode(n, nil, elementType); err != nil {
+	if childNode, err := newNode(n, elementType); err != nil {
 		return err
 	} else {
 		n.Collection = &Member{Node: childNode, Tag: &MemberTag{}}
@@ -39,7 +39,7 @@ func (n *Node) initStructMembers() error {
 		f := t.Field(i)
 		if tag := f.Tag.Get("hat"); tag != "" {
 			name := strings.ToLower(f.Name)
-			if childNode, err := newNode(n, &f, f.Type); err != nil {
+			if childNode, err := newNode(n, f.Type); err != nil {
 				return err
 			} else if member, err := newMember(childNode, tag); err != nil {
 				return err
