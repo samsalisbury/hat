@@ -4,45 +4,44 @@ import (
 	"reflect"
 )
 
-var op_specs = ops{
-	Manifest: on(SELF_Nil).In(IN_Parent, IN_ID).Out(OUT_Error),
+var op_specs = map[string]*Op{
+	"Manifest": on(SELF_Nil).In(IN_Parent).OptIn(IN_ID).Out(OUT_Error).
+		RequireIf(func(_ reflect.Type, _ reflect.Type) bool { return true }),
 }
 
-var op_specs_V = reflect.ValueOf(op_specs)
-
-type ops struct {
-	Manifest *Operation
+type Op struct {
+	On             SELF
+	Inputs         []IN
+	OptionalInputs []IN
+	Outputs        []OUT
+	Required       func(entity reflect.Type, parent reflect.Type) bool
 }
 
-type compiled_ops struct {
-	Manifest *CompiledOperation
+func (o *Op) MinIn() int {
+	return len(o.Inputs)
 }
 
-var op_specs_T = reflect.TypeOf(compiled_ops{})
-
-type Operation struct {
-	On      SELF
-	Inputs  []IN
-	Outputs []OUT
+func (o *Op) MaxIn() int {
+	return o.MinIn() + o.MinIn()
 }
 
-func (o *Operation) RequiresNilReceiver() bool {
+func (o *Op) RequiresNilReceiver() bool {
 	return o.On == SELF_Nil
 }
 
-func (o *Operation) RequiresPayloadReceiver() bool {
+func (o *Op) RequiresPayloadReceiver() bool {
 	return o.On == SELF_Payload
 }
 
-func (o *Operation) RequiresManifestedReceiver() bool {
+func (o *Op) RequiresManifestedReceiver() bool {
 	return o.On == SELF_Manifested
 }
 
-func (o *Operation) RequiresOtherPayload() bool {
-	return o.Requires(IN_OtherPayload)
+func (o *Op) RequiresPayload() bool {
+	return o.Requires(IN_Payload)
 }
 
-func (o *Operation) Requires(in IN) bool {
+func (o *Op) Requires(in IN) bool {
 	for _, i := range o.Inputs {
 		if i == in {
 			return true
@@ -51,57 +50,88 @@ func (o *Operation) Requires(in IN) bool {
 	return false
 }
 
-type CompiledOperation struct {
-	Def             *Operation
+type CompiledOp struct {
+	Def             *Op
 	OtherEntityType reflect.Type
 	Method          reflect.Method
+	NumIn           int
+	In              []IN
+	InputTypes      []reflect.Type
+	Node            *Node
 }
 
-func (o *Operation) Compile(n *Node, m reflect.Method) (*CompiledOperation, error) {
-	co := &CompiledOperation{o, nil, m}
-	actualNumIn := m.Type.NumIn() - 1
-	if actualNumIn != len(o.Inputs) {
-		return nil, n.MethodError(m.Name, "Wrong number of inputs. Expected", len(o.Inputs), "but got", actualNumIn)
+func (o *Op) Compile(n *Node, m reflect.Method) (*CompiledOp, error) {
+	var otherEntityType reflect.Type
+	numIn := m.Type.NumIn() - 1
+	exactInputs := make([]IN, numIn)
+	inputTypes := make([]reflect.Type, numIn)
+	i := 0
+	if numIn < o.MinIn() || numIn > o.MaxIn() {
+		return nil, n.wrongNumIn(m.Name, o, numIn)
 	}
-	for i, in := range o.Inputs {
-		realType := m.Type.In(i + 1)
-		if err := in.Accepts(n, m.Name, i, realType); err != nil {
+	// Validate the mandatory inputs of the user defined method (m).
+	for userPos, in := range o.Inputs {
+		realPos := 1 + userPos
+		paramType := m.Type.In(realPos)
+		if err := in.Accepts(n, m.Name, userPos, paramType); err != nil {
 			return nil, err
 		}
-		switch in {
-		case IN_OtherPayload:
-			co.OtherEntityType = realType
-		default:
+		// Special meanings of certain field types are resolved here.
+		if in == IN_Payload {
+			otherEntityType = paramType
 		}
+		exactInputs[i] = in
+		inputTypes[i] = paramType
+		i++
 	}
-	return co, nil
+	// Validate the optional inputs of the user defined method (m).
+	for userPos, in := range o.OptionalInputs {
+		userPos = userPos + len(o.Inputs)
+		realPos := 1 + userPos
+		if userPos == numIn {
+			break
+		}
+		paramType := m.Type.In(realPos)
+		if err := in.Accepts(n, m.Name, userPos, paramType); err != nil {
+			return nil, err
+		}
+		exactInputs[i] = in
+		inputTypes[i] = paramType
+		i++
+	}
+	return &CompiledOp{o, otherEntityType, m, numIn, exactInputs, inputTypes, n}, nil
 }
 
-type BoundOperation struct {
-	Compiled     *CompiledOperation
-	Receiver     interface{}
-	OtherPayload interface{}
-	Method       reflect.Value
+// A BoundOp has all data resolved, and a method bound to the
+// specified receiver value (nil, payload, or manifested).
+type BoundOp struct {
+	Compiled *CompiledOp
+	Receiver interface{}
+	Inputs   map[IN]boundInput
+	Method   reflect.Value
 }
 
-func (co *CompiledOperation) BindNilReceiver(t reflect.Type) *BoundOperation {
-	return &BoundOperation{Compiled: co, Receiver: reflect.New(t).Interface()}
+func (co *CompiledOp) BindNilReceiver() *BoundOp {
+	return &BoundOp{Compiled: co, Receiver: reflect.New(co.Node.EntityType).Interface()}
 }
 
-func (co *CompiledOperation) BindManifestedOrPayloadReciever(rcvr interface{}) (*BoundOperation, error) {
-	return &BoundOperation{Compiled: co, Receiver: rcvr}, nil
+func (co *CompiledOp) BindManifestedOrPayloadReciever(rcvr interface{}) (*BoundOp, error) {
+	return &BoundOp{Compiled: co, Receiver: rcvr}, nil
 }
 
-func (co *CompiledOperation) Invoke(n *Node, parent interface{}, id string, p *Payload) (entity interface{}, other interface{}, err error) {
-	if bo, err := co.Bind(n, parent, id, p); err != nil {
+func (co *CompiledOp) Invoke(inputs map[IN]boundInput) (entity interface{}, other interface{}, err error) {
+	if bo, err := co.Bind(inputs); err != nil {
 		return nil, nil, err
 	} else {
-		return bo.Invoke(n, parent, id)
+		return bo.Invoke()
 	}
 }
 
-func (bo *BoundOperation) Invoke(n *Node, parent interface{}, id string) (entity interface{}, other interface{}, err error) {
-	in := bo.PrepareInputs(n, parent, id)
+func (bo *BoundOp) Invoke() (entity interface{}, other interface{}, err error) {
+	var in []reflect.Value
+	if in, err = bo.PrepareInputs(); err != nil {
+		return nil, nil, err
+	}
 	out := bo.Method.Call(in)
 	entity = bo.Receiver
 	for i, o := range bo.Compiled.Def.Outputs {
@@ -118,76 +148,91 @@ func (bo *BoundOperation) Invoke(n *Node, parent interface{}, id string) (entity
 	return entity, other, err
 }
 
-func (bo *BoundOperation) PrepareInputs(n *Node, parent interface{}, id string) []reflect.Value {
-	prepared := []reflect.Value{}
-	if bo.Compiled.Def.Requires(IN_Parent) {
-		// TODO: Evaluate if this check is necessary
-		if parent == nil {
-			if n.Parent != nil {
-				parent = reflect.New(n.Parent.EntityType).Interface()
-			} else {
-				parent = struct{}{}
+func (bo *BoundOp) PrepareInputs() ([]reflect.Value, error) {
+	prepared := make([]reflect.Value, bo.Compiled.NumIn)
+	for i, in := range bo.Compiled.In {
+		if it, err := bo.Inputs[in](bo); err != nil {
+			return nil, err
+		} else {
+			if it == nil {
+				it = reflect.New(bo.Compiled.InputTypes[i])
 			}
+			prepared[i] = reflect.ValueOf(it)
 		}
-		prepared = append(prepared, reflect.ValueOf(parent))
 	}
-	if bo.Compiled.Def.Requires(IN_ID) {
-		prepared = append(prepared, reflect.ValueOf(id))
-	}
-	if bo.Compiled.Def.Requires(IN_OtherPayload) {
-		prepared = append(prepared, reflect.ValueOf(bo.OtherPayload))
-	}
-	return prepared
+	return prepared, nil
+
+	// i := 0
+	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_Parent) {
+	// 	i++
+	// 	// TODO: Evaluate if this check is necessary
+	// 	if parent == nil {
+	// 		if n.Parent != nil {
+	// 			parent = reflect.New(bo.Compiled.Node.Parent.EntityType).Interface()
+	// 		} else {
+	// 			parent = struct{}{}
+	// 		}
+	// 	}
+	// 	prepared = append(prepared, reflect.ValueOf(parent))
+	// }
+	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_ID) {
+	// 	i++
+	// 	prepared = append(prepared, reflect.ValueOf(id))
+	// }
+	// if i < bo.Compiled.NumIn && bo.Compiled.Def.Requires(IN_Payload) {
+	// 	i++
+	// 	prepared = append(prepared, reflect.ValueOf(bo.OtherPayload))
+	// }
+	// return prepared
 }
 
-func (co *CompiledOperation) Bind(n *Node, parent interface{}, id string, p *Payload) (*BoundOperation, error) {
-	if bo, err := co.BindReceiver(n, parent, id, p); err != nil {
+func (co *CompiledOp) Bind(inputs map[IN]boundInput) (*BoundOp, error) {
+	if bo, err := co.BindReceiver(inputs); err != nil {
 		return nil, err
 	} else if err := bo.BindMethod(); err != nil {
 		return nil, err
-	} else if err := bo.BindOtherPayload(n, p); err != nil {
-		return nil, err
 	} else {
+		bo.Inputs = inputs
 		return bo, nil
 	}
 }
 
-func (bo *BoundOperation) BindOtherPayload(n *Node, p *Payload) error {
-	if !bo.Compiled.Def.Requires(IN_OtherPayload) {
-		return nil
-	}
-	if payload, err := p.Manifest(bo.Compiled.OtherEntityType); err != nil {
-		return err
-	} else {
-		bo.OtherPayload = payload
-	}
+func (bo *BoundOp) BindMethod() error {
+	bo.Method = reflect.ValueOf(bo.Receiver).MethodByName(bo.Compiled.Method.Name)
 	return nil
 }
 
-func (bo *BoundOperation) BindMethod() error {
-	method := reflect.ValueOf(bo.Receiver).MethodByName(bo.Compiled.Method.Name)
-	bo.Method = method
-	return nil
+func (co *CompiledOp) Error(args ...interface{}) hatError {
+	return co.Node.MethodError(co.Method.Name, args...)
 }
 
-func (co *CompiledOperation) BindReceiver(n *Node, parent interface{}, id string, p *Payload) (*BoundOperation, error) {
+func (co *CompiledOp) BindReceiver(inputs map[IN]boundInput) (*BoundOp, error) {
 	if co.Def.RequiresNilReceiver() {
-		return co.BindNilReceiver(n.EntityType), nil
-	} else if co.Def.RequiresManifestedReceiver() {
-		if rcvr, _, err := n.Operations.Manifest.Invoke(n, parent, id, p); err != nil {
-			return nil, err
-		} else {
-			return co.BindManifestedOrPayloadReciever(rcvr)
-		}
-	} else if co.Def.RequiresPayloadReceiver() {
-		if rcvr, err := p.Manifest(n.EntityType); err != nil {
-			return nil, err
-		} else {
-			return co.BindManifestedOrPayloadReciever(rcvr)
-		}
+		return co.BindNilReceiver(), nil
 	} else {
-		panic("No receiver type specified for *" + n.EntityType.Name() + "." + co.Method.Name)
+		var rcvr interface{}
+		var err error
+		if co.Def.RequiresManifestedReceiver() {
+			rcvr, err = co.BindManifestedReceiver(inputs)
+		} else if co.Def.RequiresPayloadReceiver() {
+			rcvr, err = co.BindPayloadReceiver(inputs)
+		}
+		if err != nil {
+			return nil, co.Error("BindReceiver(...)", err.Error())
+		}
+		return co.BindManifestedOrPayloadReciever(rcvr)
 	}
+	return nil, co.Node.MethodError(co.Method.Name, "no receiver type specified")
+}
+
+func (co *CompiledOp) BindManifestedReceiver(inputs map[IN]boundInput) (interface{}, error) {
+	rcvr, _, err := co.Node.Ops["Manifest"].Invoke(inputs)
+	return rcvr, err
+}
+
+func (co *CompiledOp) BindPayloadReceiver(inputs map[IN]boundInput) (interface{}, error) {
+	bo := &BoundOp{Compiled: co}
+	return inputs[IN_Payload](bo)
 }
 
 type SELF int
@@ -198,42 +243,6 @@ const (
 	SELF_Manifested = SELF(iota)
 )
 
-type IN int
-
-const (
-	IN_Parent       = IN(iota)
-	IN_OtherPayload = IN(iota)
-	IN_ID           = IN(iota)
-)
-
-func (in IN) Accepts(n *Node, name string, pos int, t reflect.Type) error {
-	switch in {
-	default:
-		panic("The programmer has made a serious error.")
-	case IN_ID:
-		if t.Kind() == reflect.String {
-			return nil
-		} else {
-			return n.MethodError(name, "cannot accept input type", t, "at position", pos)
-		}
-	case IN_Parent:
-		if n.Parent == nil || t == n.Parent.EntityPtrType {
-			return nil // maybe one day we won't need these useless params
-		} else {
-			return n.MethodError(name, "expects a pointer to its parent type", n.Parent.EntityPtrType, "at position", pos)
-		}
-	case IN_OtherPayload:
-		if t.Kind() == reflect.Ptr {
-			elemKind := t.Elem().Kind()
-			switch elemKind {
-			case reflect.Struct, reflect.Map, reflect.Slice:
-				return nil // This is the only ok case, otherwise we return the below error.
-			}
-		}
-		return n.MethodError(name, "expects a pointer to a struct, map, or slice at position", pos)
-	}
-}
-
 type OUT int
 
 const (
@@ -241,9 +250,11 @@ const (
 	OUT_OtherEntity = OUT(iota)
 )
 
-func on(self SELF) *Operation                      { return &Operation{On: self} }
-func (o *Operation) In(inputs ...IN) *Operation    { o.Inputs = inputs; return o }
-func (o *Operation) Out(outputs ...OUT) *Operation { o.Outputs = outputs; return o }
+func on(self SELF) *Op                                                  { return &Op{On: self} }
+func (o *Op) In(inputs ...IN) *Op                                       { o.Inputs = inputs; return o }
+func (o *Op) OptIn(inputs ...IN) *Op                                    { o.OptionalInputs = inputs; return o }
+func (o *Op) Out(outputs ...OUT) *Op                                    { o.Outputs = outputs; return o }
+func (o *Op) RequireIf(p func(e reflect.Type, p reflect.Type) bool) *Op { o.Required = p; return o }
 
 func iType(nilPtr interface{}) reflect.Type {
 	return reflect.TypeOf(nilPtr).Elem()

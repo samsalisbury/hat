@@ -26,9 +26,29 @@ type Health struct {
 
 type Apps map[string]App
 
+func (entity *Apps) Manifest(_ *Root, _ string) error {
+	(*entity) = the_apps
+	return nil
+}
+
+// func (*Apps) Page(_ *Root, _ string, number int, maxItems int) ([]string, error) {
+// 	ids := []string{}
+// 	for k, _ := range the_apps {
+// 		ids := append(ids, k)
+// 	}
+// 	return ids, nil
+// }
+
 type App struct {
 	Name     string
 	Versions Versions `hat:"embed()"`
+}
+
+func (entity *App) Manifest(parent *Apps, id string) error {
+	if app, ok := (*parent)[id]; ok {
+		(*entity) = app
+	}
+	return nil
 }
 
 type Versions map[string]Version
@@ -53,11 +73,6 @@ func (entity *Health) Manifest(_ *Root, _ string) error {
 	return nil
 }
 
-func (entity *Apps) Manifest(_ *Root, _ string) error {
-	(*entity) = the_apps
-	return nil
-}
-
 var the_apps = Apps{
 	"test-app": App{
 		"Test App",
@@ -73,13 +88,6 @@ var the_apps = Apps{
 			"0.4.0": Version{"other-app-v0-0-2", "0.4.0", "July 2014"},
 		},
 	},
-}
-
-func (entity *App) Manifest(parent *Apps, id string) error {
-	if app, ok := (*parent)[id]; ok {
-		(*entity) = app
-	}
-	return nil
 }
 
 func (entity *Versions) Manifest(parent *App, _ string) error {

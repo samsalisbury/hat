@@ -1,28 +1,18 @@
 package hat
 
-import (
-	"reflect"
-)
-
-func (n *Node) initOperations() error {
-	ops := &compiled_ops{}
-	numDefinedOps := op_specs_V.NumField()
-	for i := 0; i < numDefinedOps; i++ {
-		field := op_specs_V.Field(i)
-		name := op_specs_T.Field(i).Name
-		op := field.Interface().(*Operation)
+func (n *Node) initOps() error {
+	n.Ops = map[string]*CompiledOp{}
+	for name, op := range op_specs {
 		if m, ok := n.EntityPtrType.MethodByName(name); !ok {
 			continue
-		} else if compiled, err := op.Compile(n, m); err != nil {
+		} else if co, err := op.Compile(n, m); err != nil {
 			return err
 		} else {
-			f := reflect.ValueOf(ops).Elem().FieldByName(name)
-			f.Set(reflect.ValueOf(compiled))
+			n.Ops[name] = co
 		}
 	}
-	if ops.Manifest == nil {
+	if n.Ops["Manifest"] == nil {
 		return Error(n.EntityType, "does not have a Manifest method.")
 	}
-	n.Operations = *ops
 	return nil
 }

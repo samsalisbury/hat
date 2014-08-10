@@ -19,11 +19,40 @@ func NewServer(root interface{}) (*Server, error) {
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if statusCode, resource, err := s.root.Render(r.URL.Path, r.Method, newPayload(r)); err != nil {
+	inputBinder := makeInputBinder(r)
+	if statusCode, resource, err := s.root.Render(r.URL.Path, r.Method, inputBinder); err != nil {
 		writeError(w, err)
 	} else {
 		writeResponse(w, statusCode, resource)
 	}
+}
+
+type boundInput func(*BoundOp) (interface{}, error)
+
+func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
+	return func(n *ResolvedNode) map[IN]boundInput {
+		return map[IN]boundInput{
+			IN_Parent: func(bo *BoundOp) (interface{}, error) {
+				return n.ParentEntity(), nil
+			},
+			IN_ID: func(*BoundOp) (interface{}, error) {
+				return n.ID, nil
+			},
+			IN_Payload: func(bo *BoundOp) (interface{}, error) {
+				payload := newPayload(r)
+				var t reflect.Type
+				if bo.Compiled.Def.RequiresPayloadReceiver() {
+					t = bo.Compiled.Node.EntityType
+				} else if bo.Compiled.Def.Requires(IN_Payload) {
+					t = bo.Compiled.OtherEntityType
+				} else {
+					return nil, bo.Compiled.Error("bindInputs: unable to determine required payload type")
+				}
+				return payload.Manifest(t)
+			},
+		}
+	}
+
 }
 
 func writeError(w http.ResponseWriter, err error) {

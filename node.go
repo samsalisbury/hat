@@ -8,18 +8,18 @@ type Node struct {
 	Parent         *Node
 	EntityType     reflect.Type
 	EntityPtrType  reflect.Type
-	Operations     compiled_ops
-	HTTPMethods    map[string]StdHTTPMethod
+	Ops            map[string]*CompiledOp
 	Members        map[string]*Member
 	Collection     *Member
 	CollectionName string
 }
 
 type ResolvedNode struct {
-	Node   *Node
-	Parent *ResolvedNode
-	ID     string
-	Entity interface{}
+	Node        *Node
+	Parent      *ResolvedNode
+	ID          string
+	Entity      interface{}
+	HTTPMethods map[string]StdHTTPMethod
 }
 
 func (root *Node) Locate(path ...string) (*ResolvedNode, error) {
@@ -54,14 +54,27 @@ func (n *ResolvedNode) Locate(path ...string) (*ResolvedNode, error) {
 }
 
 func (n *Node) Resolve(parentNode *ResolvedNode, id string) (*ResolvedNode, error) {
-	var parent interface{}
+	var parentEntity interface{}
 	if parentNode != nil && parentNode.Entity != nil {
-		parent = parentNode.Entity
+		parentEntity = parentNode.Entity
 	}
-	if _, entity, err := n.HTTPMethods["GET"](n, parent, id, &Payload{}); err != nil {
+	inputs := bindManifestInputs(parentEntity, id)
+	if entity, err := n.innerGET(inputs); err != nil {
 		return nil, err
 	} else {
-		return &ResolvedNode{n, parentNode, id, entity}, nil
+		// That last nil is the inputBinder, which only gets set on the target node.
+		return &ResolvedNode{n, parentNode, id, entity, nil}, nil
+	}
+}
+
+func bindManifestInputs(parent interface{}, id string) map[IN]boundInput {
+	return map[IN]boundInput{
+		IN_Parent: func(_ *BoundOp) (interface{}, error) {
+			return parent, nil
+		},
+		IN_ID: func(_ *BoundOp) (interface{}, error) {
+			return id, nil
+		},
 	}
 }
 
@@ -95,13 +108,10 @@ func newNode(parent *Node, field *reflect.StructField, entityType reflect.Type) 
 }
 
 func (n *Node) init() error {
-	if err := n.initOperations(); err != nil {
+	if err := n.initOps(); err != nil {
 		return err
 	}
 	if err := n.initMembers(); err != nil {
-		return err
-	}
-	if err := n.initHttpMethods(); err != nil {
 		return err
 	}
 	return nil
