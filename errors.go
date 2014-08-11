@@ -33,7 +33,7 @@ func (h hatError) Error() string {
 }
 
 func Error(args ...interface{}) hatError {
-	message := msgS(args)
+	message := msgS(args...)
 	return hatError{message}
 }
 

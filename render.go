@@ -11,11 +11,10 @@ func (root *Node) Render(path string, method string, inputBinder inBinder) (int,
 	if err != nil {
 		return 0, nil, err
 	}
-	target.HTTPMethods = makeHTTPMethods(target)
-	inputs := inputBinder(target)
+	target.HTTPMethods = makeHTTPMethods(target, inputBinder(target))
 	if method, ok := target.HTTPMethods[method]; !ok {
 		return 0, nil, HttpError(405, target, "does not support method", method, "; it does support:", supportedMethods(target))
-	} else if statusCode, entity, err := method(inputs); err != nil {
+	} else if statusCode, entity, err := method(); err != nil {
 		return 0, nil, err
 	} else if resource, err := target.Resource(entity); err != nil {
 		return 0, nil, err

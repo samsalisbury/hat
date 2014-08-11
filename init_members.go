@@ -42,6 +42,11 @@ func (n *Node) initStructMembers() error {
 			if err != nil {
 				return err
 			}
+
+			if tag.Embed && f.Type.Kind() != reflect.Ptr {
+				return n.MethodError(f.Name, "is", f.Type, "should be", reflect.PtrTo(f.Type), "because it is tagged embed()")
+			}
+
 			name := strings.ToLower(f.Name)
 			if childNode, err := newNode(n, f.Type); err != nil {
 				return err
