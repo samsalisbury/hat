@@ -33,10 +33,15 @@ func (n *ResolvedNode) FilteredMemberResource(fields []string) (*Resource, error
 	return n.Resource(filtered)
 }
 
-// We pass in entity here, since sometimes we are not rendering the node entity
-// itself, but rather some arbitrary entity, e.g. from POSTs.
-func (n *ResolvedNode) Resource(entity interface{}) (*Resource, error) {
-	if embedded, err := n.EmbeddedResources(); err != nil {
+func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
+	if other != nil {
+		// Other could be anything, e.g. a status message,
+		// therefore it can't be linked like other entities.
+		// However I think we need a way to allow adding arbitrary
+		// links to these kinds of responses.
+		return &Resource{other, nil, nil}, nil
+	}
+	if embedded, entity, err := n.EmbedResources(); err != nil {
 		return nil, err
 	} else if links, err := n.Links(); err != nil {
 		return nil, err

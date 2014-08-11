@@ -97,7 +97,7 @@ type Version struct {
 
 func (entity *Root) Manifest() error {
 	(*entity) = Root{
-		Hello: "Wecome to the test API.",
+		Hello: "Welcome to the test API.",
 	}
 	return nil
 }

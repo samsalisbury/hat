@@ -11,22 +11,38 @@ func makeHTTPMethods(n *ResolvedNode, inputs map[IN]boundInput) map[string]StdHT
 }
 
 func makeGET(n *ResolvedNode, inputs map[IN]boundInput) StdHTTPMethod {
-	if n.Node.IsCollection {
-		return makeGETCollection(n, inputs)
-	} else {
-		return makeGETMember(n, inputs)
+	return func() (statusCode int, other interface{}, err error) {
+		var sc int
+		if n.Entity == nil {
+			sc = 404
+		} else {
+			sc = 200
+		}
+		return sc, nil, nil
 	}
+	// if n.Node.IsCollection {
+	// 	return makeGETCollection(n, inputs)
+	// } else {
+	// 	return makeGETSingular(n, inputs)
+	// }
 }
 
 func makeGETCollection(n *ResolvedNode, inputs map[IN]boundInput) StdHTTPMethod {
-	return func() (statusCode int, entity interface{}, err error) {
-		return 200, n.Entity, nil
+	return func() (statusCode int, other interface{}, err error) {
+		// GET is a special case, since all resources are "GOT" before other things happen to them.
+		var sc int
+		if n.Entity == nil {
+			sc = 404
+		} else {
+			sc = 200
+		}
+		return sc, nil, nil
 	}
 }
 
-func makeGETMember(n *ResolvedNode, inputs map[IN]boundInput) StdHTTPMethod {
-	return func() (statusCode int, entity interface{}, err error) {
-		return 200, n.Entity, nil
+func makeGETSingular(n *ResolvedNode, inputs map[IN]boundInput) StdHTTPMethod {
+	return func() (statusCode int, other interface{}, err error) {
+		return 200, nil, nil
 	}
 }
 

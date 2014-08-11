@@ -2,7 +2,6 @@ package hat
 
 import (
 	"reflect"
-	"strings"
 )
 
 func (n *Node) initMembers() error {
@@ -43,14 +42,15 @@ func (n *Node) initStructMembers() error {
 				return err
 			}
 
+			// Embedded items must be pointers. This just makes the code in hat
+			// easier to write.
 			if tag.Embed && f.Type.Kind() != reflect.Ptr {
 				return n.MethodError(f.Name, "is", f.Type, "should be", reflect.PtrTo(f.Type), "because it is tagged embed()")
 			}
 
-			name := strings.ToLower(f.Name)
 			if childNode, err := newNode(n, f.Type); err != nil {
 				return err
-			} else if member, err := newMember(childNode, tag); err != nil {
+			} else if member, err := newMember(f.Name, childNode, tag); err != nil {
 				return err
 			} else {
 				if childNode.IsCollection {
@@ -59,7 +59,7 @@ func (n *Node) initStructMembers() error {
 					// in so it can configure the node correctly.
 					childNode.CollectionTag = tag
 				}
-				n.Members[name] = member
+				n.Members[member.URLName()] = member
 			}
 		}
 	}
