@@ -1,16 +1,10 @@
 package hat
 
-func (n *ResolvedNode) EmbedResources() (embedded, entity smap, err error) {
-	entity, err = toSmap(n.Entity)
-	if err != nil {
-		return nil, nil, err
-	}
+func (n *ResolvedNode) Embedded(entity *smap) (smap, error) {
 	if n.Node.IsCollection {
-		embedded, err = embedItems(&entity, n)
-	} else {
-		embedded, err = embedMembers(&entity, n)
+		return embedItems(entity, n)
 	}
-	return embedded, entity, err
+	return embedMembers(entity, n)
 }
 
 func embedItems(entity *smap, n *ResolvedNode) (smap, error) {

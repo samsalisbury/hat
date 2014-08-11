@@ -1,6 +1,6 @@
 package hat
 
-func (n *ResolvedNode) Links() ([]Link, error) {
+func (n *ResolvedNode) Links(entity *smap) ([]Link, error) {
 	links := []Link{Link{"self", n.Path()}}
 	for name, member := range n.Node.Members {
 		if member.Tag.Link {
@@ -9,6 +9,7 @@ func (n *ResolvedNode) Links() ([]Link, error) {
 				rel = name
 			}
 			links = append(links, Link{rel, n.Path() + "/" + name})
+			entity.deleteIgnoringCase(name)
 		}
 	}
 	return links, nil

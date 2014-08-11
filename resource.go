@@ -2,7 +2,7 @@ package hat
 
 type Resource struct {
 	Entity   interface{}
-	Embedded map[string]interface{}
+	Embedded smap
 	Links    []Link
 }
 
@@ -22,7 +22,7 @@ func (n *ResolvedNode) FilteredMemberResource(fields []string) (*Resource, error
 	if err != nil {
 		return nil, err
 	}
-	filtered := make(map[string]interface{}, len(fields))
+	filtered := make(smap, len(fields))
 	for _, f := range fields {
 		filtered[f] = m[f]
 	}
@@ -37,9 +37,11 @@ func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
 		// links to these kinds of responses.
 		return &Resource{other, nil, nil}, nil
 	}
-	if embedded, entity, err := n.EmbedResources(); err != nil {
+	if entity, err := toSmap(n.Entity); err != nil {
 		return nil, err
-	} else if links, err := n.Links(); err != nil {
+	} else if embedded, err := n.Embedded(&entity); err != nil {
+		return nil, err
+	} else if links, err := n.Links(&entity); err != nil {
 		return nil, err
 	} else {
 		return &Resource{entity, embedded, links}, nil

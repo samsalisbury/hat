@@ -17,7 +17,7 @@ func TestHat(t *testing.T) {
 type Root struct {
 	Hello  string
 	Apps   *Apps   `hat:"embed(Name); page(1,1)"`
-	Health *Health `hat:"embed(TestField)"`
+	Health *Health `hat:"embed(); link()"`
 }
 
 type Health struct {
