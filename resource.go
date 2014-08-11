@@ -1,9 +1,5 @@
 package hat
 
-import (
-	"encoding/json"
-)
-
 type Resource struct {
 	Entity   interface{}
 	Embedded map[string]interface{}
@@ -22,7 +18,7 @@ func (n *ResolvedNode) DefaultMemberResource() (*Resource, error) {
 }
 
 func (n *ResolvedNode) FilteredMemberResource(fields []string) (*Resource, error) {
-	m, err := mapify(n.Entity)
+	m, err := toSmap(n.Entity)
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +43,5 @@ func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
 		return nil, err
 	} else {
 		return &Resource{entity, embedded, links}, nil
-	}
-}
-
-func mapify(v interface{}) (map[string]interface{}, error) {
-	if j, err := json.Marshal(v); err != nil {
-		return nil, err
-	} else {
-		var m map[string]interface{}
-		if err := json.Unmarshal(j, &m); err != nil {
-			return nil, err
-		}
-		return m, nil
 	}
 }
