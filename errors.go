@@ -74,12 +74,12 @@ func debug(args ...interface{}) {
 
 // msgS concatenates string representations of the args with spaces between them.
 func msgS(args ...interface{}) string {
-	return msg(" ", args)
+	return msg(" ", args...)
 }
 
 // msgS concatenates string representations of the args with no spaces between them.
 func msgNS(args ...interface{}) string {
-	return msg("", args)
+	return msg("", args...)
 }
 
 func msg(sep string, args ...interface{}) string {
@@ -88,4 +88,8 @@ func msg(sep string, args ...interface{}) string {
 		message = append(message, fmt.Sprint(a))
 	}
 	return strings.Join(message, sep)
+}
+
+func quot(args ...interface{}) string {
+	return "'" + msgS(args...) + "'"
 }

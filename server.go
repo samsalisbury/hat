@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strconv"
 )
 
 type Server struct {
@@ -39,6 +40,7 @@ func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
 				return n.ID, nil
 			},
 			IN_Payload: func(bo *BoundOp) (interface{}, error) {
+				// TODO: These methods should all be compiled at the compile step.
 				payload := newPayload(r)
 				var t reflect.Type
 				if bo.Compiled.Def.RequiresPayloadReceiver() {
@@ -50,9 +52,17 @@ func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
 				}
 				return payload.Manifest(t)
 			},
+			IN_PageNum: func(*BoundOp) (interface{}, error) {
+				if n := r.URL.Query().Get("page"); len(n) == 0 {
+					return 0, nil
+				} else if page, err := strconv.ParseInt(n, 10, 32); err != nil {
+					return 0, Error("Page number", quot(n), "not recognised; expected integer:", err)
+				} else {
+					return page, nil
+				}
+			},
 		}
 	}
-
 }
 
 func writeError(w http.ResponseWriter, err error) {

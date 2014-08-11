@@ -5,6 +5,7 @@ import (
 )
 
 type Node struct {
+	IsCollection   bool
 	Parent         *Node
 	EntityType     reflect.Type
 	EntityPtrType  reflect.Type
@@ -12,6 +13,7 @@ type Node struct {
 	Members        map[string]*Member
 	Collection     *Member
 	CollectionName string
+	CollectionTag  *Tag
 }
 
 type ResolvedNode struct {
@@ -54,27 +56,11 @@ func (n *ResolvedNode) Locate(path ...string) (*ResolvedNode, error) {
 }
 
 func (n *Node) Resolve(parentNode *ResolvedNode, id string) (*ResolvedNode, error) {
-	var parentEntity interface{}
-	if parentNode != nil && parentNode.Entity != nil {
-		parentEntity = parentNode.Entity
-	}
-	inputs := bindManifestInputs(parentEntity, id)
-	if entity, err := n.innerGET(inputs); err != nil {
+	if entity, err := n.innerGET(parentNode, id); err != nil {
 		return nil, err
 	} else {
 		// That last nil is the inputBinder, which only gets set on the target node.
 		return &ResolvedNode{n, parentNode, id, entity, nil}, nil
-	}
-}
-
-func bindManifestInputs(parent interface{}, id string) map[IN]boundInput {
-	return map[IN]boundInput{
-		IN_Parent: func(_ *BoundOp) (interface{}, error) {
-			return parent, nil
-		},
-		IN_ID: func(_ *BoundOp) (interface{}, error) {
-			return id, nil
-		},
 	}
 }
 
@@ -98,8 +84,12 @@ func newNode(parent *Node, entityType reflect.Type) (*Node, error) {
 	if entityType.Kind() == reflect.Ptr {
 		entityType = entityType.Elem()
 	}
+	isCollection := false
+	if entityType.Kind() == reflect.Slice || entityType.Kind() == reflect.Map {
+		isCollection = true
+	}
 	entityPtrType := reflect.PtrTo(entityType)
-	node := &Node{Parent: parent, EntityType: entityType, EntityPtrType: entityPtrType}
+	node := &Node{IsCollection: isCollection, Parent: parent, EntityType: entityType, EntityPtrType: entityPtrType}
 	if err := node.init(); err != nil {
 		return nil, err
 	} else {

@@ -4,11 +4,6 @@ import (
 	"reflect"
 )
 
-var op_specs = map[string]*Op{
-	"Manifest": on(SELF_Nil).In().OptIn(IN_Parent, IN_ID).Out(OUT_Error).
-		RequireIf(func(_ *Node) bool { return true }),
-}
-
 type Op struct {
 	On             SELF
 	Inputs         []IN

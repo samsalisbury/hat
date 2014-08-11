@@ -16,7 +16,7 @@ func TestHat(t *testing.T) {
 
 type Root struct {
 	Hello  string
-	Apps   Apps   `hat:"embed()"`
+	Apps   Apps   `hat:"embed(Name); page(1,1)"`
 	Health Health `hat:"embed(TestField)"`
 }
 
@@ -27,12 +27,47 @@ type Health struct {
 
 type Apps map[string]App
 
-func (entity *Apps) Manifest(_ *Root, _ string) error {
-	(*entity) = the_apps
-	return nil
+func (*Apps) Fields(_ *Root, _ string) ([]string, error) {
+	return []string{"Name"}, nil
 }
 
-// func (*Apps) Page(_ *Root, _ string, number int, maxItems int) ([]string, error) {
+func (entity *Apps) Page(number int, _ *Root, _ string) ([]string, error) {
+	if number == 0 {
+		number = 1
+	}
+	size := 0
+	if size == 0 {
+		size = 10
+	}
+	ids := []string{}
+	for id, _ := range the_apps {
+		ids = append(ids, id)
+	}
+	(*entity) = the_apps
+	return ids, nil
+}
+
+// func (entity *Apps) PageFiltered(fields []string, number int, size int, _ *Root, _ string) ([]*App, error) {
+// 	apps := []App{}
+// 	for _, a := range the_apps {
+// 		apps := append(apps, a)
+// 	}
+// 	return apps, nil
+// }
+
+// func (entity *Apps) Total(_ *Root, _ string) (int, error) {
+// 	return 0, nil
+// }
+
+// func (entity *Apps) Manifest(_ *Root, _ string) error {
+// 	(*entity) = Apps{
+// 		ArbitraryField: "Hello",
+// 		SomeOtherField: "Hi!",
+// 	}
+// 	return nil
+// }
+
+// func (*Apps) Page(_ *Root, _ string) ([]string, error) {
 // 	ids := []string{}
 // 	for k, _ := range the_apps {
 // 		ids := append(ids, k)
@@ -42,7 +77,7 @@ func (entity *Apps) Manifest(_ *Root, _ string) error {
 
 type App struct {
 	Name     string
-	Versions Versions `hat:"embed()"`
+	Versions Versions `hat:"link()"`
 }
 
 func (entity *App) Manifest(parent *Apps, id string) error {
@@ -91,9 +126,14 @@ var the_apps = Apps{
 	},
 }
 
-func (entity *Versions) Manifest(parent *App) error {
-	(*entity) = parent.Versions
-	return nil
+func (entity *Versions) Page(page int, parent *App) ([]string, error) {
+	ids := make([]string, len(parent.Versions))
+	i := 0
+	for id, _ := range parent.Versions {
+		ids[i] = id
+		i++
+	}
+	return ids, nil
 }
 
 func (entity *Version) Manifest(parent *Versions, id string) error {
