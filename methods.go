@@ -104,25 +104,3 @@ func bindManifestInputs(n *Node, id string) map[IN]boundInput {
 		},
 	}
 }
-
-// func (n *Node) innerGETCollection(parent *ResolvedNode, id string, inputs map[IN]boundInput) (resource interface{}, err error) {
-// 	if _, other, err := n.Ops["Page"].Invoke(inputs); err != nil {
-// 		return nil, err
-// 	} else if ids, ok := other.([]string); !ok {
-// 		return nil, Error("page must return a slice of strings and and error")
-// 	} else if rn, err := n.Resolve(parent, id); err != nil {
-// 		return nil, err
-// 	} else {
-// 		collection := make([]interface{}, len(ids))
-// 		for _, id := range ids {
-// 			if itemNode, err := rn.Locate(id); err != nil {
-// 				return nil, Error("innerGETCollection:", err.Error())
-// 			} else if entity, err := itemNode.Node.innerGET(rn, id, bindManifestInputs(rn, id)); err != nil {
-// 				return nil, Error("innerGETCollection:", err.Error())
-// 			} else {
-// 				collection = append(collection, entity)
-// 			}
-// 		}
-// 		return collection, nil
-// 	}
-// }
