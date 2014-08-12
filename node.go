@@ -17,13 +17,30 @@ type Node struct {
 }
 
 type ResolvedNode struct {
-	Node          *Node
-	Parent        *ResolvedNode
-	ID            string
-	Entity        interface{} // Can be collection or single struct
-	CollectionIDs []string    // Only set when Node.IsCollection
-	Tag           *Tag
-	HTTPMethods   map[string]StdHTTPMethod
+	Parent *ResolvedNode
+	Node   *Node
+	ID     string
+	Tag    *Tag // The member tag for this relationship.
+
+	// Singular-item-specific fields: (nil for collections)
+	Entity interface{} // Manifested singular entity.
+
+	// Collection-specific fields: (nil for singular items)
+	Collection    interface{} // Manifested collection.
+	CollectionIDs []string    // Manifested collection IDs.
+
+	// The HTTP methods for this node; very late bound.
+	HTTPMethods map[string]StdHTTPMethod
+}
+
+// Creates both singular and collection resolved nodes that belong to a collection.
+func (n *ResolvedNode) newResolvedCollection(node *Node, id string, tag *Tag, collection interface{}, ids []string) *ResolvedNode {
+	return &ResolvedNode{n, node, id, tag, nil, collection, ids, nil}
+}
+
+// Creates both singular and collection resolved nodes that belong to a named member.
+func (n *ResolvedNode) newResolvedSingular(node *Node, id string, tag *Tag, entity interface{}) *ResolvedNode {
+	return &ResolvedNode{n, node, id, tag, entity, nil, nil, nil}
 }
 
 func (root *Node) Locate(path ...string) (*ResolvedNode, error) {
@@ -50,12 +67,21 @@ func (n *ResolvedNode) Locate(path ...string) (*ResolvedNode, error) {
 }
 
 func ResolveRoot(root *Node) (*ResolvedNode, error) {
-	entity, _, err := root.Manifest(nil, "")
+	entity, err := root.ManifestSingular(nil, "")
 	if err != nil {
 		return nil, err
 	}
-	return &ResolvedNode{root, nil, "", entity, nil, &Tag{}, nil}, nil
+	return &ResolvedNode{nil, root, "", &Tag{}, entity, nil, nil, nil}, nil
 }
+
+// Resolve methods are named like this:
+// Resolve(Item|Member)(Singular|Collection)
+// We use Item when the parent is a collection
+//        Member when the parent is a struct
+//        Singular when the child is a struct
+//        Collection when the child is a collection.
+//
+// i.e. Resolve{Child's relationship to parent}{Child's entity mode}
 
 func (n *ResolvedNode) Resolve(id string) (*ResolvedNode, error) {
 	if n.Node.IsCollection {
@@ -65,36 +91,13 @@ func (n *ResolvedNode) Resolve(id string) (*ResolvedNode, error) {
 	}
 }
 
-func (n *Node) Manifest(parentEntity interface{}, id string) (entity interface{}, ids []string, err error) {
-	inputs := n.createChildManifestInputs(parentEntity, id)
-	var other interface{}
-	if n.IsCollection {
-		entity, other, err = n.Ops["Page"].Invoke(inputs)
-		ids = other.([]string)
-	} else {
-		entity, _, err = n.Ops["Manifest"].Invoke(inputs)
-	}
-	return
-}
-
-func (n *Node) ManifestStruct(inputs map[IN]boundInput) (entity, _ interface{}, err error) {
-	return n.Ops["Manifest"].Invoke(inputs)
-}
-
-func (n *Node) ManifestCollection(inputs map[IN]boundInput) (entity, ids interface{}, err error) {
-	return n.Ops["Page"].Invoke(inputs)
-}
-
 func (n *ResolvedNode) ResolveItem(id string) (*ResolvedNode, error) {
-	childEntity, childIDs, err := n.Node.Collection.Node.Manifest(n.Entity, id)
-	if err != nil {
-		return nil, err
+	collection := n.Node.Collection
+	if collection.Node.IsCollection {
+		return n.ResolveItemCollection(collection.Tag, collection.Node, id)
+	} else {
+		return n.ResolveItemSingular(collection.Tag, collection.Node, id)
 	}
-	if childEntity == nil {
-		return nil, HttpError(404, "collection", n.ID, "does not have an item with ID", quot(id))
-	}
-	return n.newResolvedItem(id, childEntity, childIDs), nil
-	//return &ResolvedNode{n.Node.Collection.Node, n, id, childEntity, childIDs, n.Node.Collection.Tag, nil}, nil
 }
 
 func (n *ResolvedNode) ResolveMember(id string) (*ResolvedNode, error) {
@@ -102,30 +105,74 @@ func (n *ResolvedNode) ResolveMember(id string) (*ResolvedNode, error) {
 	if !ok {
 		return nil, HttpError(404, n.ID, "does not have a member called", quot(id))
 	}
-	childEntity, childIDs, err := member.Node.Manifest(n.Entity, id)
+	if member.Node.IsCollection {
+		return n.ResolveMemberCollection(member.Tag, member.Node, id)
+	} else {
+		return n.ResolveMemberSingular(member.Tag, member.Node, id)
+	}
+}
+
+func (n *ResolvedNode) ResolveMemberCollection(tag *Tag, collectionNode *Node, id string) (*ResolvedNode, error) {
+	collection, ids, err := collectionNode.ManifestCollection(n.Entity, id)
 	if err != nil {
 		return nil, err
 	}
-	return n.newResolvedMember(member, id, childEntity, childIDs), nil
+	return n.newResolvedCollection(collectionNode, id, tag, collection, ids), nil
 }
 
-// Creates both singular and collection resolved nodes that belong to a collection.
-func (n *ResolvedNode) newResolvedItem(id string, entity interface{}, collectionIDs []string) *ResolvedNode {
-	return &ResolvedNode{n.Node.Collection.Node, n, id, entity, collectionIDs, n.Node.Collection.Tag, nil}
-}
-
-// Creates both singular and collection resolved nodes that belong to a named member.
-func (n *ResolvedNode) newResolvedMember(member *Member, id string, entity interface{}, collectionIDs []string) *ResolvedNode {
-	return &ResolvedNode{member.Node, n, id, entity, collectionIDs, member.Tag, nil}
-}
-
-func (n *ResolvedNode) ParentEntity() interface{} {
-	if n.Parent == nil {
-		return nil
-	} else {
-		return n.Parent.Entity
+func (n *ResolvedNode) ResolveMemberSingular(tag *Tag, singularNode *Node, id string) (*ResolvedNode, error) {
+	entity, err := singularNode.ManifestSingular(n.Entity, id)
+	if err != nil {
+		return nil, err
 	}
+	return n.newResolvedSingular(singularNode, id, tag, entity), nil
 }
+
+func (n *ResolvedNode) ResolveItemCollection(tag *Tag, collectionNode *Node, id string) (*ResolvedNode, error) {
+	collection, ids, err := collectionNode.ManifestCollection(n.Collection, id)
+	if err != nil {
+		return nil, err
+	}
+	if collection == nil {
+		return nil, HttpError(404, "collection", n.ID, "does not have an item with ID", quot(id))
+	}
+	return n.newResolvedCollection(collectionNode, id, tag, collection, ids), nil
+}
+
+func (n *ResolvedNode) ResolveItemSingular(tag *Tag, singularNode *Node, id string) (*ResolvedNode, error) {
+	entity, err := singularNode.ManifestSingular(n.Collection, id)
+	if err != nil {
+		return nil, err
+	}
+	if entity == nil {
+		return nil, HttpError(404, "collection", n.ID, "does not have an item with ID", quot(id))
+	}
+	return n.newResolvedSingular(singularNode, id, tag, entity), nil
+}
+
+func (n *Node) ManifestSingular(parentEntity interface{}, id string) (interface{}, error) {
+	inputs := n.createChildManifestInputs(parentEntity, id)
+	entity, _, err := n.Ops["Manifest"].Invoke(inputs)
+	return entity, err
+}
+
+func (n *Node) ManifestCollection(parentCollection interface{}, id string) (collection interface{}, ids []string, err error) {
+	inputs := n.createChildManifestInputs(parentCollection, id)
+	entity, other, err := n.Ops["Page"].Invoke(inputs)
+	if err != nil {
+		return nil, nil, err
+	}
+	ids = other.([]string)
+	return entity, ids, err
+}
+
+// func (n *ResolvedNode) ParentEntity() interface{} {
+// 	if n.Parent == nil {
+// 		return nil
+// 	} else {
+// 		return n.Parent.Entity
+// 	}
+// }
 
 func (n *ResolvedNode) Path() string {
 	if n.Parent != nil {

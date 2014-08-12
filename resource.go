@@ -7,29 +7,6 @@ type Resource struct {
 	Links                   []Link
 }
 
-func (n *ResolvedNode) EmbeddedResource(tag *Tag) (*Resource, error) {
-	if len(tag.EmbedFields) != 0 {
-		return n.FilteredEmbeddedResource(tag.EmbedFields)
-	}
-	return n.DefaultEmbeddedResource()
-}
-
-func (n *ResolvedNode) DefaultEmbeddedResource() (*Resource, error) {
-	return n.Resource(n.Entity)
-}
-
-func (n *ResolvedNode) FilteredEmbeddedResource(fields []string) (*Resource, error) {
-	m, err := toSmap(n.Entity)
-	if err != nil {
-		return nil, err
-	}
-	filtered := make(smap, len(fields))
-	for _, f := range fields {
-		filtered[f] = m[f]
-	}
-	return n.Resource(nil)
-}
-
 func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
 	if other != nil {
 		// Other could be anything, e.g. a status message,
@@ -55,4 +32,27 @@ func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
 		}
 		return &Resource{entity, embeddedMembers, embeddedCollectionItems, links}, nil
 	}
+}
+
+func (n *ResolvedNode) EmbeddedResource(tag *Tag) (*Resource, error) {
+	if len(tag.EmbedFields) != 0 {
+		return n.FilteredEmbeddedResource(tag.EmbedFields)
+	}
+	return n.DefaultEmbeddedResource()
+}
+
+func (n *ResolvedNode) DefaultEmbeddedResource() (*Resource, error) {
+	return n.Resource(n.Entity)
+}
+
+func (n *ResolvedNode) FilteredEmbeddedResource(fields []string) (*Resource, error) {
+	m, err := toSmap(n.Entity)
+	if err != nil {
+		return nil, err
+	}
+	filtered := make(smap, len(fields))
+	for _, f := range fields {
+		filtered[f] = m[f]
+	}
+	return n.Resource(nil)
 }

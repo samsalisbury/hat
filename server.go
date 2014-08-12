@@ -35,7 +35,7 @@ func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
 	return func(n *ResolvedNode) map[IN]boundInput {
 		return map[IN]boundInput{
 			IN_Parent: func(bo *BoundOp) (interface{}, error) {
-				return n.ParentEntity(), nil
+				return n.Parent.Entity, nil
 			},
 			IN_ID: func(*BoundOp) (interface{}, error) {
 				return n.ID, nil
