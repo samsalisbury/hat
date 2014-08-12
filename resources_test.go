@@ -21,8 +21,8 @@ type Root struct {
 }
 
 type Health struct {
-	Hello     string
-	TestField string
+	Hello     string `json:"hello"`
+	TestField string `json:"testfield"`
 }
 
 type Apps map[string]App
@@ -76,7 +76,8 @@ func (entity *Apps) Page(number int, _ *Root, _ string) ([]string, error) {
 // }
 
 type App struct {
-	Name     string
+	Name     string    `json:"name"`
+	ID       string    `json:"id"`
 	Versions *Versions `hat:"link()"`
 }
 
@@ -90,9 +91,9 @@ func (entity *App) Manifest(parent *Apps, id string) error {
 type Versions map[string]Version
 
 type Version struct {
-	ID      string
-	Version string
-	Date    string
+	ID      string `json:"id"`
+	Version string `json:"version`
+	Date    string `json:"date"`
 }
 
 func (entity *Root) Manifest() error {
@@ -111,14 +112,14 @@ func (entity *Health) Manifest(_ *Root) error {
 
 var the_apps = Apps{
 	"test-app": App{
-		"Test App",
+		"Test App", "test-app",
 		&Versions{
 			"0.0.1": Version{"test-app-v0-0-1", "0.0.1", "May 2013"},
 			"0.0.2": Version{"test-app-v0-0-2", "0.0.2", "August 2014"},
 		},
 	},
 	"other-app": App{
-		"Other App",
+		"Other App", "other-app",
 		&Versions{
 			"0.1.0": Version{"other-app-v0-0-1", "0.1.0", "June 2014"},
 			"0.4.0": Version{"other-app-v0-0-2", "0.4.0", "July 2014"},
