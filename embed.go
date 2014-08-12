@@ -12,10 +12,10 @@ func embedItems(n *ResolvedNode) (smap, error) {
 	for _, id := range n.CollectionIDs {
 		if childNode, err := n.Resolve(id); err != nil {
 			return nil, err
-		} else if embeddedResource, err := childNode.Resource(nil); err != nil {
+		} else if resource, err := childNode.MemberResource(n.Node.Collection.Tag.EmbedFields); err != nil {
 			return nil, err
 		} else {
-			embedded[id] = embeddedResource
+			embedded[id] = resource
 		}
 	}
 	return embedded, nil
