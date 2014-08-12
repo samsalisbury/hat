@@ -21,25 +21,25 @@ func RenderAsHAL(r *Resource) (smap, error) {
 		}
 	}
 	if r.EmbeddedMembers != nil && len(r.EmbeddedMembers) != 0 {
-		embedded := smap{}
-		for name, childResource := range r.EmbeddedMembers {
+		members := smap{}
+		for _, childResource := range r.EmbeddedMembers {
 			if c, err := RenderAsHAL(childResource); err != nil {
 				return nil, halError(err)
 			} else {
-				embedded[name] = c
+				members[childResource.Rel] = c
 			}
 		}
-		hal["_embedded"] = embedded
+		hal["_embedded"] = members
 	} else if r.EmbeddedCollectionItems != nil && len(r.EmbeddedCollectionItems) != 0 {
-		embedded := make([]smap, len(r.EmbeddedCollectionItems))
+		items := make([]smap, len(r.EmbeddedCollectionItems))
 		for i, itemResource := range r.EmbeddedCollectionItems {
 			if c, err := RenderAsHAL(itemResource); err != nil {
 				return nil, halError(err)
 			} else {
-				embedded[i] = c
+				items[i] = c
 			}
 		}
-		hal["_embedded"] = smap{"NAME": embedded}
+		hal["_embedded"] = smap{r.Rel: items}
 	}
 	return hal, nil
 }

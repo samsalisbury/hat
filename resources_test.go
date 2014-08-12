@@ -77,7 +77,7 @@ func (entity *Apps) Page(number int, _ *Root, _ string) ([]string, error) {
 
 type App struct {
 	Name     string
-	Versions Versions `hat:"link()"`
+	Versions *Versions `hat:"link()"`
 }
 
 func (entity *App) Manifest(parent *Apps, id string) error {
@@ -112,14 +112,14 @@ func (entity *Health) Manifest(_ *Root) error {
 var the_apps = Apps{
 	"test-app": App{
 		"Test App",
-		Versions{
+		&Versions{
 			"0.0.1": Version{"test-app-v0-0-1", "0.0.1", "May 2013"},
 			"0.0.2": Version{"test-app-v0-0-2", "0.0.2", "August 2014"},
 		},
 	},
 	"other-app": App{
 		"Other App",
-		Versions{
+		&Versions{
 			"0.1.0": Version{"other-app-v0-0-1", "0.1.0", "June 2014"},
 			"0.4.0": Version{"other-app-v0-0-2", "0.4.0", "July 2014"},
 		},
@@ -127,9 +127,9 @@ var the_apps = Apps{
 }
 
 func (entity *Versions) Page(page int, parent *App) ([]string, error) {
-	ids := make([]string, len(parent.Versions))
+	ids := make([]string, len(*parent.Versions))
 	i := 0
-	for id, _ := range parent.Versions {
+	for id, _ := range *parent.Versions {
 		ids[i] = id
 		i++
 	}

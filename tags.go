@@ -6,18 +6,22 @@ import (
 )
 
 type Tag struct {
+	Rel         string
 	Embed       bool
 	EmbedFields []string
 	Link        bool
-	LinkRel     string
 	Page        bool
 	PageNum     int
 	PageSize    int
 }
 
-func parseTag(datum string) (*Tag, error) {
+func newTag(rel string, datum string) (*Tag, error) {
+	if len(rel) == 0 {
+		return nil, Error("Tags require rel")
+	}
 	data := strings.Split(datum, ";")
-	tag := &Tag{}
+	rel = strings.ToLower(rel)
+	tag := &Tag{Rel: rel}
 	for _, t := range data {
 		if err := parseTagDirective(t, tag); err != nil {
 			return nil, err
@@ -60,8 +64,10 @@ func embedTag(params string, tag *Tag) error {
 }
 
 func linkTag(params string, tag *Tag) error {
+	if len(params) != 0 {
+		return Error("link tag; got params", params, "expected no parameters")
+	}
 	tag.Link = true
-	tag.LinkRel = params
 	return nil
 }
 
@@ -69,7 +75,7 @@ func pageTag(params string, tag *Tag) error {
 	tag.Page = true
 	parts := strings.Split(params, ",")
 	if len(parts) > 2 {
-		return Error("page tag; got", params, "expected 2 digits separated with comma")
+		return Error("page tag; got params", params, "expected 2 digits separated with comma")
 	}
 	pageNum := parts[0]
 	var page, size int

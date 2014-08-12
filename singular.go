@@ -62,7 +62,7 @@ func (n *ResolvedSingularNode) Links() ([]Link, error) {
 	links := []Link{Link{"self", n.Path()}}
 	for name, member := range n.Node.Members {
 		if member.Tag.Link {
-			rel := member.Tag.LinkRel
+			rel := member.Tag.Rel
 			if rel == "" {
 				rel = name
 			}
@@ -86,7 +86,7 @@ func (n *ResolvedSingularNode) Resource() (*Resource, error) {
 		for _, l := range links {
 			entity.deleteIgnoringCase(l.Rel)
 		}
-		return &Resource{entity, embeddedMembers, nil, links}, nil
+		return &Resource{n.Tag.Rel, entity, embeddedMembers, nil, links}, nil
 	}
 }
 

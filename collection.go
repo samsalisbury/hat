@@ -71,7 +71,7 @@ func (n *ResolvedCollectionNode) Resource() (*Resource, error) {
 	} else if links, err := n.Links(); err != nil {
 		return nil, err
 	} else {
-		return &Resource{nil, nil, embeddedCollectionItems, links}, nil
+		return &Resource{n.Tag.Rel, nil, nil, embeddedCollectionItems, links}, nil
 	}
 }
 

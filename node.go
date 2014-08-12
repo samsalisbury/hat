@@ -73,7 +73,7 @@ func ResolveRoot(root *Node) (ResolvedNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newResolvedSingular(nil, root, "", nil, entity), nil
+	return newResolvedSingular(nil, root, "", &Tag{}, entity), nil
 }
 
 func (n *Node) ManifestSingular(parentEntity interface{}, id string) (interface{}, error) {
