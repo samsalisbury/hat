@@ -31,11 +31,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type boundInput func(*BoundOp) (interface{}, error)
 
-func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
-	return func(n *ResolvedNode) map[IN]boundInput {
+func makeInputBinder(r *http.Request) func(ResolvedNode) map[IN]boundInput {
+	return func(n ResolvedNode) map[IN]boundInput {
 		return map[IN]boundInput{
 			IN_Parent: func(bo *BoundOp) (interface{}, error) {
-				return n.Parent.Entity, nil
+				return n.Parent().Entity(), nil
 			},
 			IN_ID: func(*BoundOp) (interface{}, error) {
 				return n.ID, nil
@@ -69,7 +69,13 @@ func makeInputBinder(r *http.Request) func(*ResolvedNode) map[IN]boundInput {
 func writeError(w http.ResponseWriter, err error) {
 	if httpErr, ok := err.(HTTPError); ok {
 		writeResponse(w, httpErr.StatusCode(), httpErr.Err())
+	} else {
+		writeResponse(w, 500, errorResource(err))
 	}
+}
+
+func errorResource(err error) smap {
+	return smap{"error": err.Error()}
 }
 
 func writeResponse(w http.ResponseWriter, statusCode int, resource interface{}) {

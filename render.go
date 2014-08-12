@@ -4,28 +4,28 @@ import (
 	"strings"
 )
 
-type inBinder func(*ResolvedNode) map[IN]boundInput
+type inBinder func(ResolvedNode) map[IN]boundInput
 
 func (root *Node) Render(path string, method string, inputBinder inBinder) (int, *Resource, error) {
-	target, err := root.Locate(strings.Split(path[1:], "/")...)
+	debug("targeting...")
+	target, err := LocateFromRoot(root, strings.Split(path[1:], "/")...)
 	if err != nil {
 		return 0, nil, err
 	}
-	target.HTTPMethods = makeHTTPMethods(target, inputBinder(target))
-	if method, ok := target.HTTPMethods[method]; !ok {
-		return 0, nil, HttpError(405, target, "does not support method", method, "; it does support:", supportedMethods(target))
-	} else if statusCode, entity, err := method(); err != nil {
-		return 0, nil, err
-	} else if resource, err := target.Resource(entity); err != nil {
-		return 0, nil, err
+	debug("binding...")
+	methods := makeHTTPMethods(target, inputBinder(target))
+
+	if method, ok := methods[method]; !ok {
+		return 0, nil, HttpError(405, target, "does not support method", method, "; it does support:", supportedMethods(methods))
 	} else {
-		return statusCode, resource, nil
+		debug("executing...")
+		return method()
 	}
 }
 
-func supportedMethods(n *ResolvedNode) string {
+func supportedMethods(methods map[string]StdHTTPMethod) string {
 	m := []string{}
-	for k, _ := range n.HTTPMethods {
+	for k, _ := range methods {
 		m = append(m, k)
 	}
 	return strings.Join(m, ", ")
