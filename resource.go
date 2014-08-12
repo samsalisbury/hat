@@ -26,7 +26,7 @@ func (n *ResolvedNode) FilteredMemberResource(fields []string) (*Resource, error
 	for _, f := range fields {
 		filtered[f] = m[f]
 	}
-	return n.Resource(filtered)
+	return n.Resource(nil)
 }
 
 func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
