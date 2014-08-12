@@ -1,6 +1,6 @@
 package hat
 
 type Link struct {
-	Rel   string `json:"rel"`
-	Hrefs string `json:"href"`
+	Rel  string `json:"rel"`
+	Href string `json:"href"`
 }

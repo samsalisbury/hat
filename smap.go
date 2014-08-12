@@ -28,12 +28,14 @@ func collectionToSmap(collection interface{}) smap {
 	return m
 }
 
-// THIS IS VERY BAD. FIX IT!
-// Converts anything to smap. Probably not a very good
-// idea, since JSON encoding has too many other
-// rules.
-// TODO: Consider an alternative method (Gob? Protobuf? Hand-rolled?)
+// THIS IS VERY BAD since JSON encoding has too many other rules.
+// TODO: Find an alternative... Probably hand-roll some reflection.
 func toSmap(v interface{}) (smap, error) {
+	return toSmapRespectingJSONTags(v)
+}
+
+// This is useful for rendering HAL
+func toSmapRespectingJSONTags(v interface{}) (smap, error) {
 	if j, err := json.Marshal(v); err != nil {
 		return nil, err
 	} else {

@@ -22,10 +22,12 @@ func NewServer(root interface{}) (*Server, error) {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer timeTrack(now(), "request")
 	inputBinder := makeInputBinder(r)
-	if statusCode, resource, err := s.root.Render(r.URL.Path, r.Method, inputBinder); err != nil {
+	if statusCode, resource, err := ExecuteRequest(s.root, r.URL.Path, r.Method, inputBinder); err != nil {
+		writeError(w, err)
+	} else if hal, err := RenderAsHAL(resource); err != nil {
 		writeError(w, err)
 	} else {
-		writeResponse(w, statusCode, resource)
+		writeResponse(w, statusCode, hal)
 	}
 }
 
