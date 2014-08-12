@@ -13,10 +13,8 @@ func makeHTTPMethods(n ResolvedNode, inputs map[IN]boundInput) map[string]StdHTT
 func makeGET(n ResolvedNode, inputs map[IN]boundInput) StdHTTPMethod {
 	return func() (statusCode int, resource *Resource, err error) {
 		if r, err := n.Resource(); err != nil {
-			debug("Resource error:", err)
 			return 0, nil, err
 		} else {
-			debug("Resource success...", r)
 			return 200, r, nil
 		}
 	}

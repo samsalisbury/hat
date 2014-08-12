@@ -73,7 +73,7 @@ func (n *ResolvedSingularNode) Links() ([]Link, error) {
 }
 
 func (n *ResolvedSingularNode) Resource() (*Resource, error) {
-	if entity, err := toSmap(n.Entity); err != nil {
+	if entity, err := toSmap(n.entity); err != nil {
 		return nil, err
 	} else if embeddedMembers, err := n.EmbeddedMembers(); err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (n *ResolvedSingularNode) DefaultEmbeddedResource() (*Resource, error) {
 }
 
 func (n *ResolvedSingularNode) FilteredEmbeddedResource(fields []string) (*Resource, error) {
-	m, err := toSmap(n.Entity)
+	m, err := toSmap(n.entity)
 	if err != nil {
 		return nil, err
 	}

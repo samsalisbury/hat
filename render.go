@@ -7,18 +7,15 @@ import (
 type inBinder func(ResolvedNode) map[IN]boundInput
 
 func (root *Node) Render(path string, method string, inputBinder inBinder) (int, *Resource, error) {
-	debug("targeting...")
 	target, err := LocateFromRoot(root, strings.Split(path[1:], "/")...)
 	if err != nil {
 		return 0, nil, err
 	}
-	debug("binding...")
 	methods := makeHTTPMethods(target, inputBinder(target))
 
 	if method, ok := methods[method]; !ok {
 		return 0, nil, HttpError(405, target, "does not support method", method, "; it does support:", supportedMethods(methods))
 	} else {
-		debug("executing...")
 		return method()
 	}
 }
