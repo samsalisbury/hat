@@ -6,7 +6,7 @@ import (
 
 type inBinder func(*ResolvedNode) map[IN]boundInput
 
-func (root *Node) Render(path string, method string, inputBinder inBinder) (int, interface{}, error) {
+func (root *Node) Render(path string, method string, inputBinder inBinder) (int, *Resource, error) {
 	target, err := root.Locate(strings.Split(path[1:], "/")...)
 	if err != nil {
 		return 0, nil, err

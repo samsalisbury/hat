@@ -1,35 +1,34 @@
 package hat
 
-func (n *ResolvedNode) Embeds() (smap, error) {
-	if n.Node.IsCollection {
-		return embedItems(n)
+func (n *ResolvedNode) EmbeddedCollectionItems() ([]*Resource, error) {
+	if !n.Node.IsCollection {
+		return nil, nil
 	}
-	return embedMembers(n)
-}
-
-func embedItems(n *ResolvedNode) (smap, error) {
-	embedded := make(smap, len(n.CollectionIDs))
-	for _, id := range n.CollectionIDs {
+	items := make([]*Resource, len(n.CollectionIDs))
+	for i, id := range n.CollectionIDs {
 		if childNode, err := n.Resolve(id); err != nil {
 			return nil, err
-		} else if resource, err := childNode.MemberResource(n.Node.Collection.Tag.EmbedFields); err != nil {
+		} else if resource, err := childNode.EmbeddedResource(n.Node.Collection.Tag); err != nil {
 			return nil, err
 		} else {
-			embedded[id] = resource
+			items[i] = resource
 		}
 	}
-	return embedded, nil
+	return items, nil
 }
 
-func embedMembers(n *ResolvedNode) (smap, error) {
-	embedded := smap{}
+func (n *ResolvedNode) EmbeddedMembers() (map[string]*Resource, error) {
+	if n.Node.IsCollection {
+		return nil, nil
+	}
+	embedded := map[string]*Resource{}
 	for urlName, member := range n.Node.Members {
 		if !member.Tag.Embed {
 			continue
 		}
 		if memberNode, err := n.Locate(urlName); err != nil {
 			return nil, err
-		} else if resource, err := memberNode.MemberResource(member.Tag.EmbedFields); err != nil {
+		} else if resource, err := memberNode.EmbeddedResource(member.Tag); err != nil {
 			return nil, err
 		} else {
 			embedded[member.Name] = resource
