@@ -4,15 +4,15 @@ Idea: Define basic CRUD operations on resources, then define HTTP behaviour in t
 
 Status: Basic structure nearly there, some features implemented:
 
-- Embedding of simple members
-- Embedding of collections (but they're duplicated, needs fixing)
+- Embedding of simple members, with optional field filters
+- Embedding of collections, with pagination & item field filtering
 - Linking to logical children
 
 Required features:
 
-- Filtering
-- Embedding of collections without duplication
+- Filtering from query-string parameters
 - Richer linking
+- Supporting child slices (presently only maps supported)
 
 Dirty code that needs cleaning:
 
