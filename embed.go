@@ -1,29 +1,27 @@
 package hat
 
-func (n *ResolvedNode) Embedded(entity *smap) (smap, error) {
+func (n *ResolvedNode) Embeds() (smap, error) {
 	if n.Node.IsCollection {
-		return embedItems(entity, n)
+		return embedItems(n)
 	}
-	return embedMembers(entity, n)
+	return embedMembers(n)
 }
 
-func embedItems(entity *smap, n *ResolvedNode) (smap, error) {
-	items := collectionToSmap(n.Entity)
-	embedded := make(smap, len(items))
-	for id, _ := range items {
+func embedItems(n *ResolvedNode) (smap, error) {
+	embedded := make(smap, len(n.CollectionIDs))
+	for _, id := range n.CollectionIDs {
 		if childNode, err := n.Resolve(id); err != nil {
 			return nil, err
 		} else if embeddedResource, err := childNode.Resource(nil); err != nil {
 			return nil, err
 		} else {
 			embedded[id] = embeddedResource
-			entity.deleteIgnoringCase(id)
 		}
 	}
 	return embedded, nil
 }
 
-func embedMembers(entity *smap, n *ResolvedNode) (smap, error) {
+func embedMembers(n *ResolvedNode) (smap, error) {
 	embedded := smap{}
 	for urlName, member := range n.Node.Members {
 		if !member.Tag.Embed {
@@ -35,7 +33,6 @@ func embedMembers(entity *smap, n *ResolvedNode) (smap, error) {
 			return nil, err
 		} else {
 			embedded[member.Name] = resource
-			entity.deleteIgnoringCase(member.Name)
 		}
 	}
 	return embedded, nil

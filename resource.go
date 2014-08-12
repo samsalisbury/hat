@@ -39,11 +39,17 @@ func (n *ResolvedNode) Resource(other interface{}) (*Resource, error) {
 	}
 	if entity, err := toSmap(n.Entity); err != nil {
 		return nil, err
-	} else if embedded, err := n.Embedded(&entity); err != nil {
+	} else if embedded, err := n.Embeds(); err != nil {
 		return nil, err
-	} else if links, err := n.Links(&entity); err != nil {
+	} else if links, err := n.Links(); err != nil {
 		return nil, err
 	} else {
+		for k, _ := range embedded {
+			entity.deleteIgnoringCase(k)
+		}
+		for _, l := range links {
+			entity.deleteIgnoringCase(l.Rel)
+		}
 		return &Resource{entity, embedded, links}, nil
 	}
 }
